@@ -1,11 +1,28 @@
 import pandas as pd
-from time import time
-from data_processor import split_features_and_target, split_data, show_partial_dependence_plot, \
-    calculate_column_variance
+from data_processor import split_features_and_target, split_data, calculate_column_variance
 from sklearn.neural_network import MLPRegressor
 from sklearn.preprocessing import QuantileTransformer
 from sklearn.pipeline import make_pipeline
 import numpy as np
+from time import time
+import matplotlib.pyplot as plt
+from sklearn.inspection import plot_partial_dependence
+
+
+def show_partial_dependence_plot(estimator, x_train, _features, _feature_names=None):
+    print('Computing partial dependence plots...')
+    _tic = time()
+    # We don't compute the 2-way PDP (5, 1) here, because it is a lot slower
+    # with the brute method.
+    plot_partial_dependence(estimator, x_train, _features, feature_names=_feature_names,
+                            n_jobs=8, grid_resolution=40)
+    print("done in {:.3f}s".format(time() - _tic))
+    fig = plt.gcf()
+    fig.suptitle('Partial dependence of house value on non-location features\n'
+                 'for the California housing dataset, with MLPRegressor')
+    fig.subplots_adjust(hspace=0.3)
+    fig.show()
+
 
 if __name__ == '__main__':
     data = pd.read_csv("fontinha_data.csv")

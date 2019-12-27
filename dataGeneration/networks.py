@@ -1,3 +1,4 @@
+import os
 import random
 import pandas as pd
 
@@ -50,11 +51,17 @@ def output_to_dataset(time_incs):
 
 
 class Network:
+    def __init__(self, name):
+        self.name = name
+
     def generate_sim_data(self, demand_data=None, n_batches=10):
         pass
 
 
 class Fontinha(Network):
+    def __init__(self):
+        super().__init__("Fontinha")
+
     def generate_sim_data(self, demand_data=None, n_batches=10):
         time_inc_list = list()
         # get 2 columns of demand data from the data frame
@@ -93,7 +100,9 @@ class Fontinha(Network):
 
 
 class Richmond(Network):
-    def __init__(self, network_file='../epanet/Richmond_skeleton.inp', sim_duration=24, sim_step=3600, hydraulic_step=10):
+    def __init__(self, network_file=os.path.dirname(os.path.realpath(__file__)) + '/epanet/Richmond_skeleton.inp',
+                 sim_duration=24, sim_step=3600, hydraulic_step=60):
+        super().__init__("Richmond")
         self.sim_duration = sim_duration * 3600
         self.empty_time_inc = {
             'startTime': None, 'duration': None, 'endTime': None,
@@ -148,7 +157,8 @@ class Richmond(Network):
     def get_pump_statuses(self, indexes):
         return self.__get_values__(indexes, EN_STATUS, get_func=ENgetlinkvalue)
 
-    def calculate_pump_times(self, previous_statuses, time_step):
+    @staticmethod
+    def calculate_pump_times(previous_statuses, time_step):
         times = []
         for i in range(len(previous_statuses)):
             if previous_statuses[i] == 1:

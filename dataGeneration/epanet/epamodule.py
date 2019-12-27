@@ -15,8 +15,8 @@ if _plat=='Linux':
 
       _lib = ctypes.CDLL("../epanet/libepanet2.so.2")
   except:
-      _lib = ctypes.CDLL(os.path.dirname(os.path.realpath(__file__)) + "/libepanet2.so.2")
-      # _lib = ctypes.CDLL(os.path.dirname(os.path.realpath(__file__)) + "/mylibepanet2.so")
+      #_lib = ctypes.CDLL(os.path.dirname(os.path.realpath(__file__)) + "/libepanet2.so.2")
+       _lib = ctypes.CDLL(os.path.dirname(os.path.realpath(__file__)) + "/mylibepanet2.so")
 elif _plat=='Windows':
   try:
     # if epanet2.dll compiled with __cdecl (as in OpenWaterAnalytics)

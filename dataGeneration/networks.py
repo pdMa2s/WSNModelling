@@ -106,7 +106,7 @@ class Richmond(Network):
         self.sim_duration = sim_duration * 3600
         self.empty_time_inc = {
             'startTime': None, 'duration': None, 'endTime': None,
-            'hFini': [], 'hFfin': [], 'E': -1, 'dmds': [], 'pumps': []}
+            'hFin': [], 'hIni': [], 'E': -1, 'dmds': [], 'pumps': []}
 
         #ENopen('../epanet/Richmond_skeleton.inp', '/dev/null')
         ENopen(network_file, '/dev/null')
@@ -210,11 +210,11 @@ class Richmond(Network):
                 self.__set_demands__(self.junction_idxs, demands, it)
 
                 time_inc = self.empty_time_inc.copy()
-                time_inc['hFini'] = self.get_tank_levels(self.tank_idxs)
+                time_inc['hIni'] = self.get_tank_levels(self.tank_idxs)
                 time_inc['dmds'] = self.get_junction_demands(self.junction_idxs)
 
                 if it > 0:
-                    time_inc_list[it - 1]['hFfin'] = time_inc['hFini']
+                    time_inc_list[it - 1]['hFin'] = time_inc['hIni']
                     time_inc_list[it - 1]['E'] = energy_sum
                     time_inc_list[it - 1]['pumps'] = [time / self.sim_step for time in pump_time_list]
                     time_inc_list[it - 1]['dmds'] = self.get_junction_demands(self.junction_idxs)

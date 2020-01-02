@@ -1,5 +1,6 @@
 import pandas as pd
-from data_processor import split_features_and_target, split_data, calculate_column_variance
+from data_processor import split_features_and_target, split_data, calculate_column_variance, process_data_pipeline, \
+    process_differential_column
 from sklearn.neural_network import MLPRegressor
 from sklearn.preprocessing import QuantileTransformer
 from sklearn.pipeline import make_pipeline
@@ -25,17 +26,22 @@ def show_partial_dependence_plot(estimator, x_train, _features, _feature_names=N
 
 
 if __name__ == '__main__':
-    data = pd.read_csv("fontinha_data.csv")
-    variance_column = calculate_column_variance(data.values, 0, 1)
-    variance_data = data.values.copy()
-    variance_data[:, 0] = variance_column
-    variance_data = np.delete(variance_data, 1, axis=1)
+    fontinha_data = pd.read_csv("fontinha_data.csv")
 
-    for data_values, features_names in [(data.values, ['hIni', 'dmd0', 'dmd1', 'agrg', 'pumps']),
-                                        (data.drop(['agrg'], axis=1).values, ['hIni', 'dmd0', 'dmd1', 'pumps']),
-                                        (variance_data, ['dmd0', 'dmd1', 'agrg', 'pumps'])]:
-        targets, features = split_features_and_target(data_values, [0])
-        X_train, X_test, y_train, y_test = split_data(targets, features, 96)
+    fontinha_differential_data = process_differential_column(fontinha_data.values, [0], [1])
+
+    richmond_data = pd.read_csv("richmond_data.csv")
+    richmond_differential_data = process_differential_column(richmond_data.values, [0], [1])
+
+    for config in [{'data': fontinha_data.values, 'target_indexes': [0], 'input_modifier': None,
+                    'feature_names': ['hIni', 'dmd0', 'dmd1', 'agrg', 'pumps']},
+                   {'data': fontinha_data.drop(['agrg'], axis=1).values, 'target_indexes': [0], 'input_modifier': None,
+                    'feature_names': ['hIni', 'dmd0', 'dmd1', 'pumps']},
+                   {'data': fontinha_differential_data, 'target_indexes': [0], 'input_modifier': None,
+                    'feature_names': ['dmd0', 'dmd1', 'agrg', 'pumps']}]:
+
+        X_train, X_test, y_train, y_test = process_data_pipeline(config['data'], config['target_indexes'],
+                                                                 96)
         print("Training MLPRegressor...")
         tic = time()
         est = make_pipeline(QuantileTransformer(),
@@ -46,4 +52,4 @@ if __name__ == '__main__':
         print("done in {:.3f}s".format(time() - tic))
         print("Test R2 score: {:.2f}".format(est.score(X_test, y_test)))
 
-        show_partial_dependence_plot(est, X_train, features_names, _feature_names=features_names)
+        show_partial_dependence_plot(est, X_train, config['feature_names'], _feature_names=config['feature_names'])

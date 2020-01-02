@@ -30,7 +30,7 @@ if __name__ == '__main__':
 
     fontinha_differential_data = process_differential_column(fontinha_data.values, [0], [1])
 
-    richmond_data = pd.read_csv("richmond_data.csv")
+    richmond_data = pd.read_csv("richmond_data_1h.csv")
     richmond_differential_data = process_differential_column(richmond_data.values, [0], [1])
 
     for config in [{'data': fontinha_data.values, 'target_indexes': [0], 'input_modifier': None,

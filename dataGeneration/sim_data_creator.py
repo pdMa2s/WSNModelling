@@ -2,7 +2,7 @@ from dataGeneration.networks import Fontinha, Richmond
 
 if __name__ == '__main__':
     #for network in [Fontinha(), Richmond()]:
-    for network in [Richmond()]:
+    for network in [Richmond(sim_step=1800)]:
         time_incs = network.generate_sim_data(n_batches=5000)
         time_incs = time_incs.round({key: 2 for key in time_incs.columns})
         print(time_incs)

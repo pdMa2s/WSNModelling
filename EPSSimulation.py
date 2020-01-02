@@ -74,7 +74,7 @@ if __name__ == '__main__':
     data = pd.read_csv("fontinha_data.csv")
     fontinha_differential_data = process_differential_column(data.values, [0], [1])
 
-    richmond_data = pd.read_csv("richmond_data.csv")
+    richmond_data = pd.read_csv("richmond_data_1h.csv")
     richmond_differential_data = process_differential_column(richmond_data.values, [_ for _ in range(6)],
                                                              [_ for _ in range(6, 12)])
 

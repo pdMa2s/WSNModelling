@@ -10,7 +10,7 @@ from sklearn.pipeline import make_pipeline
 import matplotlib.pyplot as plt
 
 
-def previous_step_repeater():
+def previous_step_repeater(y_pred, features, i):
     pass
 
 
@@ -65,14 +65,14 @@ def evaluate_multi_step(estimator, _features: np.array, _targets: np.array, n_st
 
     print(f"Multi-step simulation scores:\nr2: {metric_scores[0]}\nmae: {metric_scores[1]}")
     if plot_func is not None:
-        plot_func(_targets[-24:, :], y_pred[-24:, :])
+        plot_func(_targets[-24:, :], y_pred[-24:, :] if y_pred.ndim > 1 else y_pred.reshape(-1, 1)[-24:, :])
 
 
 if __name__ == '__main__':
     # testing_entry = {'data': None, 'input_modifier': None}
 
-    data = pd.read_csv("fontinha_data.csv")
-    fontinha_differential_data = process_differential_column(data.values, [0], [1])
+    fontinha_data = pd.read_csv("fontinha_data.csv")
+    fontinha_differential_data = process_differential_column(fontinha_data.values, [0], [1])
 
     richmond_data = pd.read_csv("richmond_data.csv")
     richmond_differential_data = process_differential_column(richmond_data.values, [_ for _ in range(6)],
@@ -90,6 +90,7 @@ if __name__ == '__main__':
         print("Training MLPRegressor...")
         tic = time()
         est = make_pipeline(QuantileTransformer(),
-                            MLPRegressor(hidden_layer_sizes=(50, 50), learning_rate_init=0.01, early_stopping=True))
+                            MLPRegressor(hidden_layer_sizes=(50, 50), learning_rate_init=0.0001, learning_rate='adaptive',
+                                         early_stopping=True, verbose=True))
         est.fit(X_train, y_train)
         evaluate_multi_step(est, X_test, y_test, 24, plot_func=plot_results)

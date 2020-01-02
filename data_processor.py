@@ -25,7 +25,7 @@ def process_differential_column(_data: np.array, right_columns: list, left_colum
     for right, left in zip(right_columns, left_columns):
         variance_column = calculate_column_variance(_data, right, left)
         differential_data[:, right] = variance_column
-        differential_data = np.delete(differential_data, left, axis=1)
+    differential_data = np.delete(differential_data, left_columns, axis=1)
     return differential_data
 
 

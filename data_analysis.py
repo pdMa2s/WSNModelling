@@ -29,7 +29,7 @@ if __name__ == '__main__':
     fontinha_data = pd.read_csv("fontinha_data.csv")
     fontinha_differential_data = process_differential_column(fontinha_data.values, [0], [1])
 
-    richmond_data = pd.read_csv("richmond_data.csv")
+    richmond_data = pd.read_csv("richmond_data_1h.csv")
     richmond_differential_data = process_differential_column(richmond_data.values, [_ for _ in range(6)],
                                                              [_ for _ in range(6, 12)])
 
@@ -47,6 +47,7 @@ if __name__ == '__main__':
                    ]:
 
         X_train, X_test, y_train, y_test = process_data_pipeline(config['data'], config['target_indexes'], 96)
+
         print("Training MLPRegressor...")
         tic = time()
         est = make_pipeline(QuantileTransformer(),

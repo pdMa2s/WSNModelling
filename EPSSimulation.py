@@ -10,17 +10,21 @@ from sklearn.pipeline import make_pipeline
 import matplotlib.pyplot as plt
 
 
-def previous_step_repeater(y_pred, features, i):
-    pass
+def previous_step_repeater(y_pred: np.ndarray, features: np.ndarray, i):
+    if y_pred.ndim == 1:
+        features[i+1, 0] = y_pred[0]
+    else:
+        features[i+1, 0: len(y_pred[0])] = y_pred[0]
+    print()
 
 
 def multi_step_simulation(estimator, _features: np.array, input_modifier=None):
     y_pred = None
     for i, x in enumerate(_features):
-        if input_modifier is not None:
-            input_modifier(x, i)
         y_pred = estimator.predict(x.reshape(1, -1)) if y_pred is None else \
             np.append(y_pred, estimator.predict(x.reshape(1, -1)), axis=0)
+        if input_modifier is not None and i != len(_features)-1:
+            input_modifier(y_pred, _features, i)
     return y_pred
 
 
@@ -74,15 +78,17 @@ if __name__ == '__main__':
     fontinha_data = pd.read_csv("fontinha_data.csv")
     fontinha_differential_data = process_differential_column(fontinha_data.values, [0], [1])
 
-    richmond_data = pd.read_csv("richmond_data.csv")
+    richmond_data = pd.read_csv("richmond_data_1h.csv")
     richmond_differential_data = process_differential_column(richmond_data.values, [_ for _ in range(6)],
                                                              [_ for _ in range(6, 12)])
 
     test_set_size = 192
-    for config in [#{'data': data.values, 'target_indexes': [0], 'input_modifier': None},
-                   #{'data': data.drop(['agrg'], axis=1).values, 'target_indexes': [0], 'input_modifier': None},
-                   # {'data': fontinha_differential_data, 'target_indexes': [0], 'input_modifier': None},
-                   {'data': richmond_differential_data, 'target_indexes': [_ for _ in range(6)], 'input_modifier': None}
+    for config in [
+       {'data': fontinha_data.values, 'target_indexes': [0], 'input_modifier': previous_step_repeater},
+       #{'data': data.drop(['agrg'], axis=1).values, 'target_indexes': [0], 'input_modifier': None},
+       # {'data': fontinha_differential_data, 'target_indexes': [0], 'input_modifier': None},
+       {'data': richmond_data.values, 'target_indexes': [_ for _ in range(6)], 'input_modifier': previous_step_repeater},
+       {'data': richmond_differential_data, 'target_indexes': [_ for _ in range(6)], 'input_modifier': None}
     ]:
 
         X_train, X_test, y_train, y_test = process_data_pipeline(config['data'], config['target_indexes'],
@@ -90,7 +96,7 @@ if __name__ == '__main__':
         print("Training MLPRegressor...")
         tic = time()
         est = make_pipeline(QuantileTransformer(),
-                            MLPRegressor(hidden_layer_sizes=(50, 50), learning_rate_init=0.0001, learning_rate='adaptive',
+                            MLPRegressor(hidden_layer_sizes=(50,), learning_rate_init=0.01, learning_rate='adaptive',
                                          early_stopping=True, verbose=True))
         est.fit(X_train, y_train)
-        evaluate_multi_step(est, X_test, y_test, 24, plot_func=plot_results)
+        evaluate_multi_step(est, X_test, y_test, 24, plot_func=plot_results, input_modifier=config['input_modifier'])

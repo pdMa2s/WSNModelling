@@ -5,7 +5,7 @@ import pandas as pd
 from dataGeneration.epanet.epamodule import ENopen, ENopenH, ENinitH, ENsettimeparam, EN_DURATION, ENrunH, ENgetnodevalue, ENgetcount, \
     EN_NODECOUNT, ENgetnodetype, EN_TANK, EN_PRESSURE, ENnextH, EN_LINKCOUNT, ENgetlinktype, EN_PUMP, ENgetlinkvalue, \
     EN_ENERGY, EN_JUNCTION, EN_DEMAND, EN_STATUS, ENsetnodevalue, ENsetlinkvalue, EN_TANKLEVEL, EN_MINLEVEL, \
-    EN_MAXLEVEL, ENcloseH, EN_HYDSTEP
+    EN_MAXLEVEL, ENcloseH, EN_HYDSTEP, EN_BASEDEMAND, ENsaveinpfile
 from dataGeneration.benchmark_solution import benchmark2018, get_demand
 from numpy import array
 
@@ -101,7 +101,7 @@ class Fontinha(Network):
 
 class Richmond(Network):
     def __init__(self, network_file=os.path.dirname(os.path.realpath(__file__)) + '/epanet/Richmond_skeleton.inp',
-                 sim_duration=24, sim_step=3600, hydraulic_step=60):
+                 sim_duration=24, sim_step=3600, hydraulic_step=10):
         super().__init__("Richmond")
         self.sim_duration = sim_duration * 3600
         self.empty_time_inc = {
@@ -152,7 +152,13 @@ class Richmond(Network):
         return self.__get_values__(indexes, EN_PRESSURE, get_func=ENgetnodevalue)
 
     def get_junction_demands(self, indexes):
-        return self.__get_values__(indexes, EN_DEMAND, get_func=ENgetnodevalue)
+        non_zero_base_demand_indexes = []
+        for idx in indexes:
+            base_demand = self.__get_values__([idx], EN_BASEDEMAND, get_func=ENgetnodevalue)
+            if base_demand[0] != 0:
+                non_zero_base_demand_indexes.append(idx)
+
+        return self.__get_values__(non_zero_base_demand_indexes, EN_DEMAND, get_func=ENgetnodevalue)
 
     def get_pump_statuses(self, indexes):
         return self.__get_values__(indexes, EN_STATUS, get_func=ENgetlinkvalue)
@@ -161,7 +167,7 @@ class Richmond(Network):
     def calculate_pump_times(previous_statuses, time_step):
         times = []
         for i in range(len(previous_statuses)):
-            if previous_statuses[i] == 1:
+            if int(previous_statuses[i]) == 1:
                 times.append(time_step)
             else:
                 times.append(0)
@@ -209,12 +215,12 @@ class Richmond(Network):
                 self.__set_pumps__(self.pump_idxs, pump_settings, it)
                 self.__set_demands__(self.junction_idxs, demands, it)
 
-                time_inc = self.empty_time_inc.copy()
-                time_inc['hIni'] = self.get_tank_levels(self.tank_idxs)
-                time_inc['dmds'] = self.get_junction_demands(self.junction_idxs)
+                current_time_inc = self.empty_time_inc.copy()
+                current_time_inc['hIni'] = self.get_tank_levels(self.tank_idxs)
+                current_time_inc['dmds'] = self.get_junction_demands(self.junction_idxs)
 
                 if it > 0:
-                    time_inc_list[it - 1]['hFin'] = time_inc['hIni']
+                    time_inc_list[it - 1]['hFin'] = current_time_inc['hIni']
                     time_inc_list[it - 1]['E'] = energy_sum
                     time_inc_list[it - 1]['pumps'] = [time / self.sim_step for time in pump_time_list]
                     time_inc_list[it - 1]['dmds'] = self.get_junction_demands(self.junction_idxs)
@@ -222,12 +228,12 @@ class Richmond(Network):
                     energy_sum = 0
                     pump_time_list = [0 for _ in range(len(self.pump_idxs))]
 
-                time_inc_list.append(time_inc)
+                time_inc_list.append(current_time_inc)
                 it += 1
 
             hydraulic_t_step = ENnextH()
         del time_inc_list[-1]
-
+        ENsaveinpfile("last_sim.inp")
         return time_inc_list
 
     # some random values generate errors
@@ -249,15 +255,13 @@ class Richmond(Network):
                                              ENgetnodevalue(self.tank_idxs[i], EN_MAXLEVEL))
                               for i in range(len(self.tank_idxs))]
 
-            pump_statuses = [[random.randint(0, 1) for _ in range(len(self.pump_idxs))]
+            pump_statuses = [[random.uniform(0, 1) for _ in range(len(self.pump_idxs))]
                              for _ in range(int(self.sim_duration / self.sim_step)+1)]
 
-            demands = [[random.uniform(0, 3) if x != len(self.junction_idxs) - 1 else random.uniform(-10, 0)
-                        for x in range(len(self.junction_idxs))]
-                       for _ in range(int(self.sim_duration/self.sim_step)+1)]
+            demands = [random.uniform(0, 1) for _ in range(int(self.sim_duration/self.sim_step))]
 
             time_incs = self.__run_simulation__(tanks_initial_levels=initial_levels,
-                                                pump_settings=None, demands=demands)
+                                                pump_settings=pump_statuses, demands=None)
             calculate_aggregated_demand(time_incs)
 
             time_inc_list.extend(time_incs)
@@ -266,6 +270,7 @@ class Richmond(Network):
 
         dataset = output_to_dataset(time_inc_list)
         dataset.info()
+
         return dataset
 
 

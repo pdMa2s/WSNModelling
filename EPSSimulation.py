@@ -1,6 +1,7 @@
 import numpy as np
+from sklearn.neighbors import KNeighborsRegressor
 from sklearn.neural_network import MLPRegressor
-from sklearn.preprocessing import QuantileTransformer
+from sklearn.preprocessing import Normalizer
 from tabulate import tabulate
 from sklearn.metrics import r2_score, mean_absolute_error
 import pandas as pd
@@ -74,29 +75,49 @@ def evaluate_multi_step(estimator, _features: np.array, _targets: np.array, n_st
 
 if __name__ == '__main__':
     # testing_entry = {'data': None, 'input_modifier': None}
+    data_dir = "dataGeneration/"
+    demands_data = pd.read_csv(f'{data_dir}demands_hyd_ann.csv', sep=';')
+    tanks_data = pd.read_csv(f'{data_dir}tanks_hyd_ann.csv', sep=';')
+    pumps_data = pd.read_csv(f'{data_dir}pumps_hyd_ann.csv', sep=';')
 
-    fontinha_data = pd.read_csv("fontinha_data.csv")
+    input_data = pd.concat((demands_data, pumps_data), axis=1)
+    input_data.drop('Time', inplace=True, axis=1)
+    target_data = tanks_data.drop('Time', axis=1)
+
+    for col in input_data.columns:
+        input_data[col].interpolate(inplace=True)
+    for col in target_data.columns:
+        target_data[col].interpolate(inplace=True)
+    target_data = target_data.diff().fillna(0)
+
+    adcl_data = np.append(target_data.values, input_data.values, axis=1)
+    print()
+
+    fontinha_data = pd.read_csv("dataGeneration/fontinha_data.csv")
     fontinha_differential_data = process_differential_column(fontinha_data.values, [0], [1])
 
-    richmond_data = pd.read_csv("richmond_data_1h.csv")
+    richmond_data = pd.read_csv("dataGeneration/richmond_data_1h.csv")
     richmond_differential_data = process_differential_column(richmond_data.values, [_ for _ in range(6)],
                                                              [_ for _ in range(6, 12)])
 
-    test_set_size = 192
+    test_set_size = 48
     for config in [
-       {'data': fontinha_data.values, 'target_indexes': [0], 'input_modifier': previous_step_repeater},
-       #{'data': data.drop(['agrg'], axis=1).values, 'target_indexes': [0], 'input_modifier': None},
+       # {'data': fontinha_data.values, 'target_indexes': [0], 'input_modifier': previous_step_repeater},
+       # {'data': data.drop(['agrg'], axis=1).values, 'target_indexes': [0], 'input_modifier': None},
        # {'data': fontinha_differential_data, 'target_indexes': [0], 'input_modifier': None},
-       {'data': richmond_data.values, 'target_indexes': [_ for _ in range(6)], 'input_modifier': previous_step_repeater},
-       {'data': richmond_differential_data, 'target_indexes': [_ for _ in range(6)], 'input_modifier': None}
+       # {'data': richmond_data.values, 'target_indexes': [_ for _ in range(6)], 'input_modifier': previous_step_repeater},
+        {'data': richmond_differential_data, 'target_indexes': [_ for _ in range(6)], 'input_modifier': None},
+       #{'data': adcl_data, 'target_indexes': [0, 1, 2], 'input_modifier': None}
     ]:
 
         X_train, X_test, y_train, y_test = process_data_pipeline(config['data'], config['target_indexes'],
                                                                  test_set_size)
         print("Training MLPRegressor...")
         tic = time()
-        est = make_pipeline(QuantileTransformer(),
-                            MLPRegressor(hidden_layer_sizes=(50,), learning_rate_init=0.01, learning_rate='adaptive',
-                                         early_stopping=True, verbose=True))
+        est = make_pipeline(Normalizer(),
+                            MLPRegressor(hidden_layer_sizes=(100, ), activation='logistic',
+                                         learning_rate_init=0.001, learning_rate='adaptive', n_iter_no_change=20,
+                                         verbose=True))
+
         est.fit(X_train, y_train)
         evaluate_multi_step(est, X_test, y_test, 24, plot_func=plot_results, input_modifier=config['input_modifier'])

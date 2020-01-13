@@ -109,7 +109,6 @@ if __name__ == '__main__':
     pumps_data = pd.read_csv(f'{data_dir}pumps_hyd_ann.csv', sep=';')
     valves_data = calc_valves_from_tanks(tanks_data)
 
-
     input_data = pd.concat((demands_data, pumps_data), axis=1)
     input_data.drop('Time', inplace=True, axis=1)
     target_data = calc_level_variation(tanks_data)

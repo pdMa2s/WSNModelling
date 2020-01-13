@@ -56,7 +56,7 @@ with this network, or email Kobus van Zyl at jevz@ing.rau.ac.za or kobusvanzyl@m
  C               	258.9       	1.84        	0           	2           	6.6         	0           	                	;
  A               	184.13      	3.12        	0.00        	3.37        	23.5        	0           	                	;
  D               	241.18      	1.94        	0.00        	2.11        	11.8        	0           	                	;
- B               	216         	3.37        	0.00        	3.65        	15.4        	0           	                	;
+ B               	216         	2.37        	0.00        	3.65        	15.4        	0           	                	;
  E               	203.01      	2.47        	0.00        	2.69        	8           	0           	                	;
  F               	235.71      	1.96        	0.00        	2.19        	3.6         	0           	                	;
 
@@ -354,20 +354,6 @@ with this network, or email Kobus van Zyl at jevz@ing.rau.ac.za or kobusvanzyl@m
  STEfficiency    	80          	77          
 
 [CONTROLS]
-LINK 1A 1.0000 IF NODE A BELOW 2.3685
-LINK 1A 0.0000 IF NODE A ABOVE 2.9799
-LINK 2A 1.0000 IF NODE A BELOW 3.0405
-LINK 2A 0.0000 IF NODE A ABOVE 3.2513
-LINK 3A 1.0000 IF NODE A BELOW 2.8888
-LINK 3A 0.0000 IF NODE A ABOVE 3.1126
-LINK 4B 1.0000 IF NODE B BELOW 3.2623
-LINK 4B 0.0000 IF NODE B ABOVE 3.5789
-LINK 5C 1.0000 IF NODE C BELOW 0.7185
-LINK 5C 0.0000 IF NODE C ABOVE 1.8850
-LINK 6D 1.0000 IF NODE D BELOW 1.5907
-LINK 6D 0.0000 IF NODE D ABOVE 1.9708
-LINK 7F 1.0000 IF NODE F BELOW 1.7037
-LINK 7F 0.0000 IF NODE F ABOVE 2.1095
 
 
 [RULES]

@@ -233,7 +233,6 @@ class Richmond(Network):
 
             hydraulic_t_step = ENnextH()
         del time_inc_list[-1]
-        ENsaveinpfile("last_sim.inp")
         return time_inc_list
 
     # some random values generate errors
@@ -261,7 +260,7 @@ class Richmond(Network):
             demands = [random.uniform(0, 1) for _ in range(int(self.sim_duration/self.sim_step))]
 
             time_incs = self.__run_simulation__(tanks_initial_levels=initial_levels,
-                                                pump_settings=pump_statuses, demands=None)
+                                                pump_settings=pump_statuses, demands=demands)
             calculate_aggregated_demand(time_incs)
 
             time_inc_list.extend(time_incs)

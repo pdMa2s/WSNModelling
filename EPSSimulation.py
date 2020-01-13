@@ -1,7 +1,7 @@
 import numpy as np
 from sklearn.neighbors import KNeighborsRegressor
 from sklearn.neural_network import MLPRegressor
-from sklearn.preprocessing import Normalizer
+from sklearn.preprocessing import Normalizer, QuantileTransformer
 from tabulate import tabulate
 from sklearn.metrics import r2_score, mean_absolute_error
 import pandas as pd
@@ -91,12 +91,11 @@ if __name__ == '__main__':
     target_data = target_data.diff().fillna(0)
 
     adcl_data = np.append(target_data.values, input_data.values, axis=1)
-    print()
 
     fontinha_data = pd.read_csv("dataGeneration/fontinha_data.csv")
     fontinha_differential_data = process_differential_column(fontinha_data.values, [0], [1])
 
-    richmond_data = pd.read_csv("dataGeneration/richmond_data_1h.csv")
+    richmond_data = pd.read_csv("dataGeneration/richmond_data.csv")
     richmond_differential_data = process_differential_column(richmond_data.values, [_ for _ in range(6)],
                                                              [_ for _ in range(6, 12)])
 
@@ -105,8 +104,8 @@ if __name__ == '__main__':
        # {'data': fontinha_data.values, 'target_indexes': [0], 'input_modifier': previous_step_repeater},
        # {'data': data.drop(['agrg'], axis=1).values, 'target_indexes': [0], 'input_modifier': None},
        # {'data': fontinha_differential_data, 'target_indexes': [0], 'input_modifier': None},
-       # {'data': richmond_data.values, 'target_indexes': [_ for _ in range(6)], 'input_modifier': previous_step_repeater},
-        {'data': richmond_differential_data, 'target_indexes': [_ for _ in range(6)], 'input_modifier': None},
+       {'data': richmond_data.values, 'target_indexes': [_ for _ in range(6)], 'input_modifier': previous_step_repeater},
+       {'data': richmond_differential_data, 'target_indexes': [_ for _ in range(6)], 'input_modifier': None},
        #{'data': adcl_data, 'target_indexes': [0, 1, 2], 'input_modifier': None}
     ]:
 
@@ -114,9 +113,10 @@ if __name__ == '__main__':
                                                                  test_set_size)
         print("Training MLPRegressor...")
         tic = time()
-        est = make_pipeline(Normalizer(),
-                            MLPRegressor(hidden_layer_sizes=(100, ), activation='logistic',
-                                         learning_rate_init=0.001, learning_rate='adaptive', n_iter_no_change=20,
+        est = make_pipeline(QuantileTransformer(),
+                            MLPRegressor(hidden_layer_sizes=(100,), activation='logistic', tol=0.000001,
+                                         early_stopping=False,
+                                         learning_rate_init=0.0001, n_iter_no_change=30,
                                          verbose=True))
 
         est.fit(X_train, y_train)

@@ -73,12 +73,29 @@ def evaluate_multi_step(estimator, _features: np.array, _targets: np.array, n_st
         plot_func(_targets[-24:, :], y_pred[-24:, :] if y_pred.ndim > 1 else y_pred.reshape(-1, 1)[-24:, :])
 
 
+def calc_valves_from_tanks(dataframe):
+    valves = dataframe.copy()
+    valves['dH'] = valves['Res_Espinheira'] - valves['Res_Espinheira'].shift().fillna(0)
+    valves['Val_Espinheira'] = valves['dH'].where(valves['dH'] > 0, 0)
+    valves['Val_Espinheira'] = valves['Val_Espinheira'].where(valves['Val_Espinheira'] <= 0, 1)
+    valves.drop(['Res_Aveleira', 'Res_Albarqueira', 'dH'], inplace=True)
+    return valves
+
+
+def filter_tanks_data(dataframe):
+    for col in dataframe.columns:
+        if col != 'Time':
+            dataframe[col].interpolate('time')
+    return dataframe
+
+
 if __name__ == '__main__':
     # testing_entry = {'data': None, 'input_modifier': None}
     data_dir = "dataGeneration/"
     demands_data = pd.read_csv(f'{data_dir}demands_hyd_ann.csv', sep=';')
     tanks_data = pd.read_csv(f'{data_dir}tanks_hyd_ann.csv', sep=';')
     pumps_data = pd.read_csv(f'{data_dir}pumps_hyd_ann.csv', sep=';')
+    valves_data = calc_valves_from_tanks(tanks_data)
 
     input_data = pd.concat((demands_data, pumps_data), axis=1)
     input_data.drop('Time', inplace=True, axis=1)

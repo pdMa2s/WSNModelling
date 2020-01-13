@@ -78,7 +78,7 @@ def calc_valves_from_tanks(dataframe):
     valves['dH'] = valves['Res_Espinheira'] - valves['Res_Espinheira'].shift().fillna(0)
     valves['Val_Espinheira'] = valves['dH'].where(valves['dH'] > 0, 0)
     valves['Val_Espinheira'] = valves['Val_Espinheira'].where(valves['Val_Espinheira'] <= 0, 1)
-    valves.drop(['Res_Aveleira', 'Res_Albarqueira', 'dH'], inplace=True)
+    valves.drop(['Time', 'Res_Aveleira', 'Res_Albarqueira', 'Res_Espinheira', 'dH'], axis=1, inplace=True)
     return valves
 
 
@@ -107,23 +107,29 @@ if __name__ == '__main__':
         target_data[col].interpolate(inplace=True)
     target_data = target_data.diff().fillna(0)
 
+    input_data['P_Aveleira'] = input_data['P_Aveleira'].where(input_data['P_Aveleira'] > 0.5, 0)
+    input_data['P_Aveleira'] = input_data['P_Aveleira'].where(input_data['P_Aveleira'] <= 0.5, 1)
+    input_data['P_Albarqueira'] = input_data['P_Albarqueira'].where(input_data['P_Albarqueira'] > 0.5, 0)
+    input_data['P_Albarqueira'] = input_data['P_Albarqueira'].where(input_data['P_Albarqueira'] <= 0.5, 1)
+
     adcl_data = np.append(target_data.values, input_data.values, axis=1)
+    adcl_data = np.append(adcl_data, valves_data.values, axis=1)
 
-    fontinha_data = pd.read_csv("dataGeneration/fontinha_data.csv")
-    fontinha_differential_data = process_differential_column(fontinha_data.values, [0], [1])
-
-    richmond_data = pd.read_csv("dataGeneration/richmond_data.csv")
-    richmond_differential_data = process_differential_column(richmond_data.values, [_ for _ in range(6)],
-                                                             [_ for _ in range(6, 12)])
+    # fontinha_data = pd.read_csv("dataGeneration/fontinha_data.csv")
+    # fontinha_differential_data = process_differential_column(fontinha_data.values, [0], [1])
+    #
+    # richmond_data = pd.read_csv("dataGeneration/richmond_data_1h.csv")
+    # richmond_differential_data = process_differential_column(richmond_data.values, [_ for _ in range(6)],
+    #                                                          [_ for _ in range(6, 12)])
 
     test_set_size = 48
     for config in [
        # {'data': fontinha_data.values, 'target_indexes': [0], 'input_modifier': previous_step_repeater},
        # {'data': data.drop(['agrg'], axis=1).values, 'target_indexes': [0], 'input_modifier': None},
        # {'data': fontinha_differential_data, 'target_indexes': [0], 'input_modifier': None},
-       {'data': richmond_data.values, 'target_indexes': [_ for _ in range(6)], 'input_modifier': previous_step_repeater},
-       {'data': richmond_differential_data, 'target_indexes': [_ for _ in range(6)], 'input_modifier': None},
-       #{'data': adcl_data, 'target_indexes': [0, 1, 2], 'input_modifier': None}
+       # {'data': richmond_data.values, 'target_indexes': [_ for _ in range(6)], 'input_modifier': previous_step_repeater},
+       # {'data': richmond_differential_data, 'target_indexes': [_ for _ in range(6)], 'input_modifier': None},
+       {'data': adcl_data, 'target_indexes': [0, 1, 2], 'input_modifier': None}
     ]:
 
         X_train, X_test, y_train, y_test = process_data_pipeline(config['data'], config['target_indexes'],

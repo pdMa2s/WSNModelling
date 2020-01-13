@@ -78,8 +78,20 @@ def calc_valves_from_tanks(dataframe):
     valves['dH'] = valves['Res_Espinheira'] - valves['Res_Espinheira'].shift().fillna(0)
     valves['Val_Espinheira'] = valves['dH'].where(valves['dH'] > 0, 0)
     valves['Val_Espinheira'] = valves['Val_Espinheira'].where(valves['Val_Espinheira'] <= 0, 1)
-    valves.drop(['Res_Aveleira', 'Res_Albarqueira', 'dH'], inplace=True)
+    valves.drop(['Time', 'Res_Espinheira', 'Res_Aveleira', 'Res_Albarqueira', 'dH'], inplace=True, axis=1)
     return valves
+
+
+def calc_level_variation(dataframe):
+    variations = dataframe.copy()
+    variations['Time'] = pd.to_datetime(variations['Time'])
+    variations['deltaT'] = (variations['Time'] - variations['Time'].shift())
+    for col in dataframe.columns:
+        if col not in ['Time', 'deltaT']:
+            variations[col] = (dataframe[col] - dataframe[col].shift()) / (variations['deltaT'] / pd.Timedelta('1H'))
+    variations.drop(['Time', 'deltaT'], inplace=True, axis=1)
+    variations.dropna(inplace=True)
+    return variations
 
 
 def filter_tanks_data(dataframe):
@@ -97,9 +109,10 @@ if __name__ == '__main__':
     pumps_data = pd.read_csv(f'{data_dir}pumps_hyd_ann.csv', sep=';')
     valves_data = calc_valves_from_tanks(tanks_data)
 
+
     input_data = pd.concat((demands_data, pumps_data), axis=1)
     input_data.drop('Time', inplace=True, axis=1)
-    target_data = tanks_data.drop('Time', axis=1)
+    target_data = calc_level_variation(tanks_data)
 
     for col in input_data.columns:
         input_data[col].interpolate(inplace=True)

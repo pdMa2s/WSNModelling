@@ -73,49 +73,12 @@ def evaluate_multi_step(estimator, _features: np.array, _targets: np.array, n_st
         plot_func(_targets[-24:, :], y_pred[-24:, :] if y_pred.ndim > 1 else y_pred.reshape(-1, 1)[-24:, :])
 
 
-def calc_valves_from_tanks(dataframe):
-    valves = dataframe.copy()
-    valves['dH'] = valves['Res_Espinheira'] - valves['Res_Espinheira'].shift().fillna(0)
-    valves['Val_Espinheira'] = valves['dH'].where(valves['dH'] > 0, 0)
-    valves['Val_Espinheira'] = valves['Val_Espinheira'].where(valves['Val_Espinheira'] <= 0, 1)
-    valves.drop(['dH'], axis=1, inplace=True)
-    return valves
-
-
-def calc_level_variation(dataframe):
-    variations = dataframe.copy()
-    variations['Time'] = pd.to_datetime(variations['Time'])
-    variations['deltaT'] = (variations['Time'] - variations['Time'].shift())
-    for col in dataframe.columns:
-        if col.startswith('Res'):
-            variations[col] = (dataframe[col] - dataframe[col].shift()) / (variations['deltaT'] / pd.Timedelta('1H'))
-    variations.drop(['Time', 'deltaT'], inplace=True, axis=1)
-    variations.dropna(inplace=True)
-    return variations
-
-
-def filter_tanks_data(dataframe):
-    for col in dataframe.columns:
-        if col != 'Time':
-            dataframe[col].interpolate('time')
-    return dataframe
 
 
 if __name__ == '__main__':
     # testing_entry = {'data': None, 'input_modifier': None}
     data_dir = "dataGeneration/"
-    adcl_data = pd.read_csv(f'{data_dir}adcl_data.csv', sep=';')
-    adcl_data['Time'] = pd.to_datetime(adcl_data['Time'])
-    #adcl_data = filter_tanks_data(adcl_data)
-
-    adcl_data = calc_valves_from_tanks(adcl_data)
-
-    adcl_data = calc_level_variation(adcl_data)
-
-    adcl_data['P_Aveleira'] = adcl_data['P_Aveleira'].where(adcl_data['P_Aveleira'] > 0.5, 0)
-    adcl_data['P_Aveleira'] = adcl_data['P_Aveleira'].where(adcl_data['P_Aveleira'] <= 0.5, 1)
-    adcl_data['P_Albarqueira'] = adcl_data['P_Albarqueira'].where(adcl_data['P_Albarqueira'] > 0.5, 0)
-    adcl_data['P_Albarqueira'] = adcl_data['P_Albarqueira'].where(adcl_data['P_Albarqueira'] <= 0.5, 1)
+    adcl_data = pd.read_csv(f'{data_dir}adcl_filtered_data.csv', sep=',')
 
 
     # fontinha_data = pd.read_csv("dataGeneration/fontinha_data.csv")

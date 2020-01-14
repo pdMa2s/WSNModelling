@@ -39,6 +39,7 @@ def calc_valves_from_tanks(dataframe):
     return valves
 
 
+
 def calc_level_variation(dataframe):
     variations = dataframe.copy()
     variations['Time'] = pd.to_datetime(variations['Time'])
@@ -46,7 +47,7 @@ def calc_level_variation(dataframe):
     variations['deltaT'] = (variations['Time'] - variations['Time'].shift())
     for col in dataframe.columns:
         if col.startswith('Res'):
-            variations[col] = (dataframe[col] - dataframe[col].shift()) / (variations['deltaT'] / pd.Timedelta('1H'))
+            variations[col] = (variations[col] - variations[col].shift()) / (variations['deltaT'] / pd.Timedelta('1H'))
     variations.drop(['deltaT'], inplace=True, axis=1)
     variations.dropna(inplace=True)
     return variations
@@ -78,6 +79,29 @@ def demands_to_volume(dataframe):
     return dataframe
 
 
+def agg_unique_controls(dataframe):
+    controls = dataframe.copy()
+    controls.dropna(axis=0, inplace=True)
+    controls.drop(['deltaT'], axis=1, inplace=True)
+    controls['code'] = ''
+    aggregators = {}
+    for col in dataframe.columns:
+        if col.startswith('Res_') or col == 'Time':
+            aggregators[col] = 'first'
+        elif col.startswith('PE_'):
+            aggregators[col] = 'mean'
+        elif col.startswith('P_') or col.startswith('Val_'):
+            aggregators[col] = 'first'
+            controls[col] = controls[col].astype(int).astype(str)
+            controls['code'] += controls[col]
+    controls['regions'] = (controls['code'] != controls['code'].shift(1)).astype(int).cumsum()
+    grouped = controls.groupby('regions')
+    grouped = grouped.agg(aggregators)
+    controls.drop(['code'], axis=1, inplace=True)
+
+    return grouped
+
+
 if __name__ == '__main__':
     data_dir = "dataGeneration/"
     raw_data = pd.read_csv(f'{data_dir}adcl_data.csv', sep=';')
@@ -85,7 +109,10 @@ if __name__ == '__main__':
     in_progress_data = filter_tanks_data(raw_data)
     in_progress_data = calc_valves_from_tanks(in_progress_data)
     in_progress_data = pumps_to_bool(in_progress_data)
+    in_progress_data = demands_to_volume(in_progress_data)
+    in_progress_data = agg_unique_controls(in_progress_data)
     in_progress_data = calc_level_variation(in_progress_data)
-    filtered_data = demands_to_volume(in_progress_data)
-    in_progress_data = filtered_data.to_csv(f'{data_dir}adcl_filtered_data.csv')
+
+
+    in_progress_data.to_csv(f'{data_dir}adcl_grouped_data.csv')
     print('Finishing...')

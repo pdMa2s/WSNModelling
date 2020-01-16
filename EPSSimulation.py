@@ -1,6 +1,7 @@
 import numpy as np
 from sklearn.neighbors import KNeighborsRegressor
 from sklearn.neural_network import MLPRegressor
+from sklearn.tree import DecisionTreeRegressor
 from sklearn.preprocessing import Normalizer, QuantileTransformer
 from tabulate import tabulate
 from sklearn.metrics import r2_score, mean_absolute_error
@@ -73,20 +74,18 @@ def evaluate_multi_step(estimator, _features: np.array, _targets: np.array, n_st
         plot_func(_targets[-24:, :], y_pred[-24:, :] if y_pred.ndim > 1 else y_pred.reshape(-1, 1)[-24:, :])
 
 
-
-
 if __name__ == '__main__':
     # testing_entry = {'data': None, 'input_modifier': None}
     data_dir = "dataGeneration/"
     adcl_data = pd.read_csv(f'{data_dir}adcl_filtered_data.csv', sep=',')
-
+    adcl_data.drop(['Time', 'Time.1', 'deltaT'], axis=1, inplace=True)
 
     # fontinha_data = pd.read_csv("dataGeneration/fontinha_data.csv")
     # fontinha_differential_data = process_differential_column(fontinha_data.values, [0], [1])
     #
-    # richmond_data = pd.read_csv("dataGeneration/richmond_data_1h.csv")
-    # richmond_differential_data = process_differential_column(richmond_data.values, [_ for _ in range(6)],
-    #                                                          [_ for _ in range(6, 12)])
+    richmond_data = pd.read_csv("dataGeneration/richmond_data_1h.csv")
+    richmond_differential_data = process_differential_column(richmond_data.values, [_ for _ in range(6)],
+                                                          [_ for _ in range(6, 12)])
 
     test_set_size = 48
     for config in [
@@ -94,19 +93,25 @@ if __name__ == '__main__':
        # {'data': data.drop(['agrg'], axis=1).values, 'target_indexes': [0], 'input_modifier': None},
        # {'data': fontinha_differential_data, 'target_indexes': [0], 'input_modifier': None},
        # {'data': richmond_data.values, 'target_indexes': [_ for _ in range(6)], 'input_modifier': previous_step_repeater},
-       # {'data': richmond_differential_data, 'target_indexes': [_ for _ in range(6)], 'input_modifier': None},
-       {'data': adcl_data, 'target_indexes': [0, 1, 2], 'input_modifier': None}
+       #  {'data': richmond_differential_data, 'target_indexes': [_ for _ in range(6)], 'input_modifier': None,
+       #   'pipelines': [make_pipeline(QuantileTransformer(output_distribution='normal'),
+       #                               MLPRegressor(hidden_layer_sizes=(200, 100, 50, 25), activation='logistic',
+       #                                            early_stopping=False,
+       #                                            n_iter_no_change=30, max_iter=400)),
+       #                 make_pipeline(QuantileTransformer(output_distribution='normal'), DecisionTreeRegressor())]
+       #  },
+        {'data': adcl_data.values[1:, :], 'target_indexes': [0, 1, 2], 'input_modifier': None,
+         'pipelines': [make_pipeline(QuantileTransformer(output_distribution='normal'),
+                                     MLPRegressor(hidden_layer_sizes=(100, 50, 25), activation='logistic',
+                                                  early_stopping=False, verbose=True,
+                                                  n_iter_no_change=30, max_iter=400))]}
     ]:
 
         X_train, X_test, y_train, y_test = process_data_pipeline(config['data'], config['target_indexes'],
                                                                  test_set_size)
-        print("Training MLPRegressor...")
         tic = time()
-        est = make_pipeline(QuantileTransformer(),
-                            MLPRegressor(hidden_layer_sizes=(100,), activation='logistic', tol=0.000001,
-                                         early_stopping=False,
-                                         learning_rate_init=0.0001, n_iter_no_change=30,
-                                         verbose=True))
+        for est in config['pipelines']:
 
-        est.fit(X_train, y_train)
-        evaluate_multi_step(est, X_test, y_test, 24, plot_func=plot_results, input_modifier=config['input_modifier'])
+            est.fit(X_train, y_train)
+            evaluate_multi_step(est, X_test, y_test, 24, plot_func=plot_results, input_modifier=config['input_modifier'])
+            print(f"Training {est.named_steps}...")

@@ -39,7 +39,6 @@ def calc_valves_from_tanks(dataframe):
     return valves
 
 
-
 def calc_level_variation(dataframe):
     variations = dataframe.copy()
     variations['Time'] = pd.to_datetime(variations['Time'])
@@ -70,12 +69,18 @@ def pumps_to_bool(dataframe):
     return dataframe
 
 
-def demands_to_volume(dataframe):
-    dataframe['deltaT'] = dataframe['Time'].diff()
+def flow_to_volume(dataframe):
 
     for col in dataframe.columns:
         if col.startswith('PE_'):
-            dataframe[col] = dataframe[col] / (dataframe['deltaT'] / pd.Timedelta('1H'))
+            dataframe[col] = dataframe[col] * (dataframe['deltaT'] / pd.Timedelta('1H'))
+    return dataframe
+
+
+def volume_to_flow(dataframe):
+    for col in dataframe.columns:
+        if col.startswith('PE_'):
+            dataframe[col] = dataframe[col] * (pd.Timedelta('1H') / dataframe['deltaT'])
     return dataframe
 
 
@@ -109,10 +114,12 @@ if __name__ == '__main__':
     in_progress_data = filter_tanks_data(raw_data)
     in_progress_data = calc_valves_from_tanks(in_progress_data)
     in_progress_data = pumps_to_bool(in_progress_data)
-    in_progress_data = demands_to_volume(in_progress_data)
+    in_progress_data['deltaT'] = in_progress_data['Time'].diff()
+    in_progress_data = flow_to_volume(in_progress_data)
     in_progress_data = agg_unique_controls(in_progress_data)
+    in_progress_data['deltaT'] = in_progress_data['Time'].diff()
+    in_progress_data = volume_to_flow(in_progress_data)
     in_progress_data = calc_level_variation(in_progress_data)
-
 
     in_progress_data.to_csv(f'{data_dir}adcl_grouped_data.csv')
     print('Finishing...')

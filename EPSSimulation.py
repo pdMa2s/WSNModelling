@@ -1,8 +1,9 @@
 import numpy as np
+from keras.layers import Dense, Activation
 from sklearn.neighbors import KNeighborsRegressor
 from sklearn.neural_network import MLPRegressor
 from sklearn.tree import DecisionTreeRegressor
-from sklearn.preprocessing import Normalizer, QuantileTransformer
+from sklearn.preprocessing import Normalizer, QuantileTransformer, StandardScaler, MinMaxScaler
 from tabulate import tabulate
 from sklearn.metrics import r2_score, mean_absolute_error
 import pandas as pd
@@ -10,6 +11,7 @@ from time import time
 from data_processor import process_data_pipeline, process_differential_column
 from sklearn.pipeline import make_pipeline
 import matplotlib.pyplot as plt
+from keras import Sequential
 
 
 def previous_step_repeater(y_pred: np.ndarray, features: np.ndarray, i):
@@ -77,8 +79,7 @@ def evaluate_multi_step(estimator, _features: np.array, _targets: np.array, n_st
 if __name__ == '__main__':
     # testing_entry = {'data': None, 'input_modifier': None}
     data_dir = "dataGeneration/"
-    adcl_data = pd.read_csv(f'{data_dir}adcl_filtered_data.csv', sep=',')
-    adcl_data.drop(['Time', 'Time.1', 'deltaT'], axis=1, inplace=True)
+    adcl_data = pd.read_csv(f'{data_dir}adcl_grouped_data.csv', sep=',')
 
     # fontinha_data = pd.read_csv("dataGeneration/fontinha_data.csv")
     # fontinha_differential_data = process_differential_column(fontinha_data.values, [0], [1])
@@ -86,6 +87,14 @@ if __name__ == '__main__':
     richmond_data = pd.read_csv("dataGeneration/richmond_data_1h.csv")
     richmond_differential_data = process_differential_column(richmond_data.values, [_ for _ in range(6)],
                                                           [_ for _ in range(6, 12)])
+
+    keras_nn = Sequential([
+        Dense(100, input_shape=(6,)),
+        Activation('sigmoid'),
+        Dense(50),
+        Activation('sigmoid')
+    ])
+    keras_nn.compile(loss='mean_squared_error', optimizer='adam')
 
     test_set_size = 48
     for config in [
@@ -100,11 +109,16 @@ if __name__ == '__main__':
        #                                            n_iter_no_change=30, max_iter=400)),
        #                 make_pipeline(QuantileTransformer(output_distribution='normal'), DecisionTreeRegressor())]
        #  },
-        {'data': adcl_data.values[1:, :], 'target_indexes': [0, 1, 2], 'input_modifier': None,
-         'pipelines': [make_pipeline(QuantileTransformer(output_distribution='normal'),
-                                     MLPRegressor(hidden_layer_sizes=(100, 50, 25), activation='logistic',
-                                                  early_stopping=False, verbose=True,
-                                                  n_iter_no_change=30, max_iter=400))]}
+        {'data': adcl_data.values, 'target_indexes': [0, 1, 2], 'input_modifier': None,
+         'pipelines': [
+             # make_pipeline(QuantileTransformer(output_distribution='normal'),
+             #                         MLPRegressor(hidden_layer_sizes=(100, 50), activation='logistic',
+             #                                      early_stopping=False, verbose=True,
+             #                                      n_iter_no_change=30, max_iter=600))
+             #
+             make_pipeline(QuantileTransformer(output_distribution='normal'), keras_nn )
+
+         ]}
     ]:
 
         X_train, X_test, y_train, y_test = process_data_pipeline(config['data'], config['target_indexes'],

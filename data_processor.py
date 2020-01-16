@@ -46,7 +46,7 @@ def calc_level_variation(dataframe):
     variations['deltaT'] = (variations['Time'] - variations['Time'].shift())
     for col in dataframe.columns:
         if col.startswith('Res'):
-            variations[col] = (variations[col] - variations[col].shift()) / (variations['deltaT'] / pd.Timedelta('1H'))
+            variations[col] = (variations[col] - variations[col].shift()) * (variations['deltaT'] / pd.Timedelta('1H'))
     variations.drop(['deltaT'], inplace=True, axis=1)
     variations.dropna(inplace=True)
     return variations
@@ -121,5 +121,5 @@ if __name__ == '__main__':
     in_progress_data = volume_to_flow(in_progress_data)
     in_progress_data = calc_level_variation(in_progress_data)
 
-    in_progress_data.to_csv(f'{data_dir}adcl_grouped_data.csv')
+    in_progress_data.drop('Time', axis=1).to_csv(f'{data_dir}adcl_grouped_data.csv', index=False)
     print('Finishing...')

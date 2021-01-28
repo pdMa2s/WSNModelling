@@ -1,6 +1,6 @@
 import pandas as pd
 from matplotlib import pyplot as plt
-import numpy
+import numpy as np
 
 
 def calc_valves_from_tanks_adcl(dataframe):
@@ -88,15 +88,102 @@ def smooth(x, window_len=11, window='hanning'):
     if not window in ['flat', 'hanning', 'hamming', 'bartlett', 'blackman']:
         raise ValueError("Window is on of 'flat', 'hanning', 'hamming', 'bartlett', 'blackman'")
 
-    s = numpy.r_[x[window_len - 1:0:-1], x, x[-2:-window_len - 1:-1]]
+    s = np.r_[x[window_len - 1:0:-1], x, x[-2:-window_len - 1:-1]]
     # print(len(s))
     if window == 'flat':  # moving average
-        w = numpy.ones(window_len, 'd')
+        w = np.ones(window_len, 'd')
     else:
         w = eval('numpy.' + window + '(window_len)')
 
-    y = numpy.convolve(w / w.sum(), s, mode='valid')
+    y = np.convolve(w / w.sum(), s, mode='valid')
     return y
+
+
+def centered(iy, window):
+    side_window = int((window - 1) / 2)
+    side_window_left = side_window + ((window - 1) % 2)
+    side_window_right = side_window  # To make up for the right border
+    changed_index = [side_window_left + 1, len(iy) - side_window_right]
+
+    for i in range(changed_index[0], changed_index[1]):
+        window_arr = [iy[j] for j in range(i - side_window_left, i + side_window_right + 1)]
+        iy[i] = np.mean(window_arr)
+
+    return iy
+
+
+def trailing(y, window=3):
+    for i in range(window - 1, len(y)):
+        y[i] = np.mean([y[j] for j in range(i + 1 - window, i + 1)])
+    return y
+
+
+def prediction(adcl, in_of_samples, iwindow, icolor, is_resampled=False):
+    my_label = 'Prediction' if is_resampled else 'Prediction_raw'
+    ix = np.linspace(0, in_of_samples / 4, in_of_samples)
+    iy = adcl["Res_Espinheira"][:in_of_samples * (1 if is_resampled else 15)]
+
+    yi = []
+
+    if not len(iy) < iwindow:
+        for i in range(len(iy) - iwindow):
+            yi.append(np.mean([iy[j + i] for j in range(iwindow)]))
+    if not is_resampled:
+        yi = resample(adcl, '15min')["Res_Espinheira"][:in_of_samples]
+    plt.plot(ix[:len(yi)], yi, color=icolor, label=my_label)
+    plt.legend(loc='upper right')
+
+
+def rolling(x, y):
+    time = 15
+    yi = y.copy().rolling(window=15)
+    yi = yi.mean()
+    # yi = my_resample(yi, time)
+    plt.plot(x[:len(x)], yi, color='sienna')
+
+
+def original(x, y, icolor):
+    plt.plot(x, y, color=icolor, label='Original')
+    plt.legend(loc='upper right')
+
+
+def smoothness_array(arr):
+    arr2 = []
+    for i in range(len(arr) - 2):
+        arr2.append(smoothness_level(arr[i], arr[i + 1], arr[i + 2]))
+
+    return arr2
+
+
+def smoothness_array_dif(arr):
+    result = []
+    for i in range(len(arr) - 2):
+        result.append((arr[i + 2] - arr[i + 1]) - (arr[i + 1] - arr[i]))
+
+    return np.mean(result)
+
+
+def smoothness_level(y1, y2, y3):
+    angle = f1(y1, y2, y3)
+
+    return angle
+
+
+def f1(x1, x2, x3):
+    numerator = 1 + (x3 - x2) * (x2 - x1)
+    denominator = (1 + (x3 - x2) ** 2) * (1 + (x2 - x1) ** 2)
+    denominator = np.sqrt(denominator)
+
+    return np.rad2deg(np.arccos(numerator / denominator))
+
+
+def f2(ang):
+    return 100 - np.log(ang / 180 + 1) / np.log(2)
+
+
+def my_print(array_of_tuples):
+    for elem in array_of_tuples:
+        print(str(elem[1]) + ": " + str(elem[0]))
 
 
 if __name__ == '__main__':
@@ -122,4 +209,5 @@ if __name__ == '__main__':
         adcl_valve_per.dropna(inplace=True)
 
         adcl_valve_per.to_csv(f"adcl_data_valve_{per}.csv", index=True)
+
 

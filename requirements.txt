@@ -1,7 +1,0 @@
-numpy
-pandas
-matplotlib
-scipy
-tabulate
-sklearn
-keras
